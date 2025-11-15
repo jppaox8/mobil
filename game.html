@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Snake Game - Arabella Chic</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 20px;
+        }
+        .container { max-width: 600px; margin: 0 auto; }
+        .header { text-align: center; margin-bottom: 30px; }
+        h1 { font-size: 3em; color: white; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); margin-bottom: 10px; }
+        .score-box { 
+            background: rgba(255,255,255,0.95); 
+            padding: 15px 25px; 
+            border-radius: 12px; 
+            font-size: 1.3em; 
+            font-weight: bold;
+            color: #667eea;
+            display: inline-block;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+        }
+        canvas { 
+            background: linear-gradient(135deg, #1e1e2e 0%, #2d2d44 100%);
+            display: block; 
+            margin: 30px auto; 
+            border: 4px solid white;
+            border-radius: 15px;
+            box-shadow: 0 15px 45px rgba(0,0,0,0.3);
+            max-width: 100%;
+            height: auto;
+        }
+        .button-group {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin: 25px 0;
+        }
+        button { 
+            padding: 12px 28px; 
+            font-size: 1em;
+            font-weight: 600;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        #restart-btn { 
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+        }
+        #restart-btn:hover { transform: translateY(-3px); box-shadow: 0 6px 20px rgba(245, 87, 108, 0.4); }
+        #show-coupons { 
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+        }
+        #show-coupons:hover { transform: translateY(-3px); box-shadow: 0 6px 20px rgba(79, 172, 254, 0.4); }
+        #rewards { 
+            max-width: 500px;
+            margin: 25px auto 0;
+            display: none;
+            text-align: left;
+            background: rgba(255,255,255,0.98);
+            padding: 25px;
+            border-radius: 15px;
+            border: none;
+            color: #333;
+            box-shadow: 0 15px 45px rgba(0,0,0,0.2);
+            animation: slideIn 0.3s ease;
+        }
+        @keyframes slideIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        #rewards h3 { 
+            margin: 0 0 15px 0;
+            color: #667eea;
+            font-size: 1.4em;
+            border-bottom: 3px solid #f093fb;
+            padding-bottom: 10px;
+        }
+        #total-points { 
+            font-size: 1.1em;
+            color: #764ba2;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+        #coupons-list { 
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .coupon-item { 
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: linear-gradient(135deg, #667eea15 0%, #f093fb15 100%);
+            padding: 12px 15px;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+            transition: all 0.2s ease;
+        }
+        .coupon-item:hover { background: linear-gradient(135deg, #667eea25 0%, #f093fb25 100%); }
+        .coupon-percent { 
+            color: #f5576c;
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+        .coupon-code { 
+            font-family: 'Courier New', monospace;
+            color: #667eea;
+            font-weight: 600;
+        }
+        .coupon-item button { 
+            padding: 8px 16px;
+            font-size: 0.9em;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .coupon-item button:hover { transform: scale(1.05); }
+        #close-rewards { 
+            width: 100%;
+            margin-top: 15px;
+            background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+            color: white;
+        }
+        #close-rewards:hover { transform: translateY(-2px); }
+        .no-coupons { color: #999; font-style: italic; }
+        /* Modal dialog for centered messages */
+        .dialog-overlay{
+            position: fixed; inset: 0; display:flex; align-items:center; justify-content:center; background: rgba(0,0,0,0.35); z-index:9999;
+        }
+        .dialog-box{
+            background: #fff; color: #111; border-radius: 12px; padding: 22px; width: 92%; max-width: 520px; box-shadow: 0 20px 60px rgba(0,0,0,0.35); border: 1px solid rgba(0,0,0,0.06);
+        }
+        .dialog-header{ font-size: 1.25em; font-weight:800; margin-bottom:8px; color: #5b21b6 }
+        .dialog-body{ font-size: 1em; margin-bottom: 14px; color: #333 }
+        .dialog-actions{ text-align: right }
+        .dialog-actions button{ background: linear-gradient(90deg,#7c3aed,#a78bfa); color:white; border:none; padding:8px 12px; border-radius:8px; cursor:pointer }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🐍 Snake Game</h1>
+            <div class="score-box" id="score">Puntuación: 0</div>
+        </div>
+        
+        <canvas id="game" width="400" height="400"></canvas>
+        
+        <div class="button-group">
+            <button id="restart-btn">🔄 Reiniciar</button>
+            <button id="show-coupons">🎁 Mis Recompensas</button>
+        </div>
+
+        <div id="rewards">
+            <h3>🏆 Tus Recompensas</h3>
+            <div id="total-points"></div>
+            <div id="coupons-list"></div>
+            <button id="close-rewards">Cerrar</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('game');
+        const ctx = canvas.getContext('2d');
+        const box = 20;
+        let snake = [{x: 9, y: 10}];
+        let direction = 'RIGHT';
+        let food = {x: Math.floor(Math.random()*20), y: Math.floor(Math.random()*20)};
+        let score = 0;
+        let gameInterval;
+
+        document.addEventListener('keydown', e => {
+            if (e.key === 'ArrowUp' && direction !== 'DOWN') direction = 'UP';
+            else if (e.key === 'ArrowDown' && direction !== 'UP') direction = 'DOWN';
+            else if (e.key === 'ArrowLeft' && direction !== 'RIGHT') direction = 'LEFT';
+            else if (e.key === 'ArrowRight' && direction !== 'LEFT') direction = 'RIGHT';
+        });
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            // Dibuja la serpiente
+            for (let i = 0; i < snake.length; i++) {
+                if (i === 0) {
+                    ctx.fillStyle = '#00ff88';
+                    ctx.shadowColor = 'rgba(0, 255, 136, 0.8)';
+                    ctx.shadowBlur = 10;
+                } else {
+                    ctx.fillStyle = '#00cc6a';
+                    ctx.shadowColor = 'transparent';
+                }
+                ctx.fillRect(snake[i].x * box, snake[i].y * box, box - 2, box - 2);
+            }
+            // Dibuja la comida
+            ctx.fillStyle = '#ff6b9d';
+            ctx.shadowColor = 'rgba(255, 107, 157, 0.8)';
+            ctx.shadowBlur = 10;
+            ctx.beginPath();
+            ctx.arc(food.x * box + box/2, food.y * box + box/2, box/2 - 2, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.shadowColor = 'transparent';
+            // Actualiza la puntuación
+            document.getElementById('score').textContent = 'Puntuación: ' + score;
+        }
+
+        function update() {
+            let head = {x: snake[0].x, y: snake[0].y};
+            if (direction === 'UP') head.y--;
+            else if (direction === 'DOWN') head.y++;
+            else if (direction === 'LEFT') head.x--;
+            else if (direction === 'RIGHT') head.x++;
+
+            if (head.x < 0 || head.x >= 20 || head.y < 0 || head.y >= 20) return gameOver();
+            for (let s of snake) if (head.x === s.x && head.y === s.y) return gameOver();
+
+            snake.unshift(head);
+            if (head.x === food.x && head.y === food.y) {
+                score++;
+                food = {x: Math.floor(Math.random()*20), y: Math.floor(Math.random()*20)};
+            } else {
+                snake.pop();
+            }
+            draw();
+        }
+
+        function gameOver() {
+            clearInterval(gameInterval);
+            showDialog('¡Juego terminado!', '<div>Tu puntuación final es <strong>' + score + '</strong>.</div>');
+        }
+
+        function restart() {
+            snake = [{x: 9, y: 10}];
+            direction = 'RIGHT';
+            food = {x: Math.floor(Math.random()*20), y: Math.floor(Math.random()*20)};
+            score = 0;
+            draw();
+            clearInterval(gameInterval);
+            gameInterval = setInterval(update, 120);
+        }
+
+        document.getElementById('restart-btn').onclick = restart;
+        restart();
+        initRewards();
+    </script>
+
+    <script>
+        function getStorage(key, fallback) {
+            try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : fallback; } catch(e){ return fallback; }
+        }
+        function setStorage(key, value){ try { localStorage.setItem(key, JSON.stringify(value)); } catch(e){} }
+
+        function generateCode() {
+            return 'AR-' + Math.random().toString(36).slice(2,8).toUpperCase();
+        }
+
+        function createCoupon(percent){
+            const coupons = getStorage('snake_coupons', []);
+            const coupon = { id: Date.now() + Math.floor(Math.random()*1000), percent, code: generateCode(), used:false };
+            coupons.push(coupon);
+            setStorage('snake_coupons', coupons);
+            return coupon;
+        }
+
+        function renderCouponsUI(){
+            const list = getStorage('snake_coupons', []);
+            const container = document.getElementById('coupons-list');
+            const totalPts = getStorage('snake_totalPoints', 0);
+            document.getElementById('total-points').textContent = 'Puntos acumulados: ' + totalPts;
+            container.innerHTML = '';
+            if(list.length === 0){ 
+                container.innerHTML = '<div class="no-coupons">🎮 No tienes cupones aún. ¡Juega para ganar descuentos!</div>'; 
+                return; 
+            }
+            list.forEach(c => {
+                const el = document.createElement('div');
+                el.className = 'coupon-item';
+                const left = document.createElement('div');
+                left.innerHTML = '<span class="coupon-percent">' + c.percent + '%</span> <span style="margin: 0 10px;">-</span> <span class="coupon-code">' + c.code + '</span>';
+                const right = document.createElement('button');
+                right.textContent = '📋 Copiar';
+                right.onclick = () => { 
+                    navigator.clipboard?.writeText(c.code); 
+                    right.textContent='✓ Copiado'; 
+                    setTimeout(()=>right.textContent='📋 Copiar', 1200); 
+                };
+                el.appendChild(left);
+                el.appendChild(right);
+                container.appendChild(el);
+            });
+        }
+
+        function initRewards(){
+            document.getElementById('show-coupons').onclick = function(){
+                document.getElementById('rewards').style.display = 'block';
+                renderCouponsUI();
+            };
+            document.getElementById('close-rewards').onclick = function(){
+                document.getElementById('rewards').style.display = 'none';
+            };
+        }
+
+        const originalGameOver = window.gameOver;
+        window.gameOver = function(){
+            const total = getStorage('snake_totalPoints', 0) + (typeof score === 'number' ? score : 0);
+            setStorage('snake_totalPoints', total);
+
+            const awarded = getStorage('snake_reward_awarded_count', 0);
+            const shouldHave = Math.floor(total / 10);
+            const newToAward = shouldHave - awarded;
+            if(newToAward > 0){
+                const awardedCoupons = [];
+                for(let i=0;i<newToAward;i++){
+                    const c = createCoupon(30);
+                    awardedCoupons.push(c);
+                }
+                // Show awarded coupons using dialog queue
+                awardedCoupons.forEach(c => showDialog('🎉 ¡Felicidades!', '<div>Has ganado un cupón de <strong>' + c.percent + '%</strong><br> Código: <span style="font-family:monospace;">' + c.code + '</span></div>'));
+                setStorage('snake_reward_awarded_count', awarded + newToAward);
+            }
+
+            try {
+                const s = Number(score) || 0;
+                if(Math.random() < (s / 100)){
+                    const percent = 5 + Math.floor(Math.random()*16);
+                    const c2 = createCoupon(percent);
+                    showDialog('🌟 ¡Bonus!', '<div>Has recibido un cupón extra de <strong>' + c2.percent + '%</strong><br> Código: <span style="font-family:monospace;">' + c2.code + '</span></div>');
+                }
+            } catch(e){}
+
+            if(typeof originalGameOver === 'function') originalGameOver();
+        };
+
+        window.addEventListener('load', ()=>{
+            initRewards();
+            const totalPts = getStorage('snake_totalPoints', 0);
+            console.log('Puntos acumulados:', totalPts);
+        });
+    </script>
+
+    <script>
+        // Simple dialog queue so multiple messages show one after another
+        const __dialogQueue = [];
+        let __dialogOpen = false;
+        function showDialog(title, html){
+            return new Promise(resolve => {
+                __dialogQueue.push({title, html, resolve});
+                if(!__dialogOpen) __dialogNext();
+            });
+        }
+        function __dialogNext(){
+            const item = __dialogQueue.shift();
+            if(!item){ __dialogOpen = false; return; }
+            __dialogOpen = true;
+            const overlay = document.createElement('div');
+            overlay.className = 'dialog-overlay';
+            overlay.innerHTML = '<div class="dialog-box">'
+                + '<div class="dialog-header">'+item.title+'</div>'
+                + '<div class="dialog-body">'+item.html+'</div>'
+                + '<div class="dialog-actions"><button id="__dlg_ok">Aceptar</button></div>'
+                + '</div>';
+            document.body.appendChild(overlay);
+            const btn = document.getElementById('__dlg_ok');
+            function close(){
+                overlay.remove();
+                __dialogOpen = false;
+                item.resolve();
+                setTimeout(__dialogNext, 120);
+            }
+            btn && btn.addEventListener('click', close);
+            overlay.addEventListener('click', (e)=>{ if(e.target === overlay) close(); });
+        }
+    </script>
+</body>
+</html>
