@@ -1,7 +1,5 @@
 const { useState, useEffect } = React;
 
-function formatPrice(v) { return 'S/ ' + Number(v).toFixed(2); }
-
 function ProductDetail() {
     const [product, setProduct] = useState(null);
     const [qty, setQty] = useState(1);
@@ -22,20 +20,9 @@ function ProductDetail() {
     }, []);
 
     function addToCart() {
-        try {
-            const raw = localStorage.getItem('arabella_cart');
-            const cart = raw ? JSON.parse(raw) : [];
-            if (!product) return;
-            const exists = cart.find(i => i.id === product.id && i.size === selectedSize);
-            if (exists) {
-                const updated = cart.map(i => (i.id === product.id && i.size === selectedSize) ? {...i, qty: i.qty + qty} : i);
-                localStorage.setItem('arabella_cart', JSON.stringify(updated));
-            } else {
-                cart.push({...product, qty, size: selectedSize});
-                localStorage.setItem('arabella_cart', JSON.stringify(cart)); 
-            }
-            alert('Añadido al carrito: ' + product.title + (selectedSize ? (' (Talla ' + selectedSize + ')') : ''));
-        } catch(e) { console.error(e); }
+        if (!product) return;
+        Cart.add(product, { qty, size: selectedSize });
+        alert('Añadido al carrito: ' + product.title + (selectedSize ? (' (Talla ' + selectedSize + ')') : ''));
     }
 
     if (!product) {
