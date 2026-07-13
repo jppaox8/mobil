@@ -105,10 +105,15 @@ function App() {
 	});
 
 	useEffect(() => {
-		localStorage.setItem('arabella_cart', JSON.stringify(cart));
+		try {
+			localStorage.setItem('arabella_cart', JSON.stringify(cart));
+		} catch (e) {
+			console.error('No se pudo guardar el carrito:', e);
+		}
 	}, [cart]);
 
 	const products = window.SHOES || [];
+	const loadError = window.SHOES_ERROR || null;
 
 	const filtered = useMemo(() => ArabellaUtils.filterProducts(products, query), [products, query]);
 
@@ -129,6 +134,12 @@ function App() {
 			<Navbar onSearchChange={setQuery} cartCount={ArabellaUtils.cartCount(cart)} onToggleCart={() => setCartOpen(true)} />
 
 			<main className="container mx-auto px-4 py-12" id="home">
+				{loadError && (
+					<div className="mb-8 p-4 rounded border border-red-200 bg-red-50 text-red-800 flex items-center justify-between" role="alert">
+						<span>No se pudo cargar el catálogo de productos: {loadError}</span>
+						<button onClick={() => window.location.reload()} className="ml-4 underline">Reintentar</button>
+					</div>
+				)}
 				{!query && (
 					<section className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center mb-14">
 						<div>
@@ -228,6 +239,7 @@ fetch('data/shoes.json')
 	.catch(err => {
 		console.error('No se pudo cargar data/shoes.json, arrancando con lista vacía', err);
 		window.SHOES = [];
+		window.SHOES_ERROR = err && err.message ? err.message : 'Error de red';
 		safeRenderApp();
 	});
 
