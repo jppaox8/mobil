@@ -1,6 +1,10 @@
 # Local runtime configuration containing endpoints/secrets — never commit.
 js/config.js
 
+# Node
+node_modules/
+coverage/
+
 # OS / editor cruft
 .DS_Store
 Thumbs.db

@@ -1,9 +1,7 @@
 const { useState, useEffect, useMemo } = React;
 
-function formatPrice(v) {
-	return 'S/ ' + Number(v).toFixed(2);
-}
-window.formatPrice = formatPrice;
+// Shared business logic lives in js/utils.js (loaded before this script) and is
+// exposed on window as `ArabellaUtils`. It also provides window.formatPrice.
 
 function Navbar({ onSearchChange, cartCount, onToggleCart }) {
 	return (
@@ -60,7 +58,7 @@ function ProductCard({ product, onAdd }) {
 }
 
 function CartDrawer({ open, onClose, cart, onRemove, onClear }) {
-	const total = cart.reduce((s, it) => s + it.price * it.qty, 0);
+	const total = ArabellaUtils.cartTotal(cart);
 	return (
 		<div className={`${open ? 'block' : 'hidden'} fixed inset-0 z-50`}> 
 			<div className="absolute inset-0 bg-black/40" onClick={onClose}></div>
@@ -112,22 +110,14 @@ function App() {
 
 	const products = window.SHOES || [];
 
-	const filtered = useMemo(() => {
-		const q = query.trim().toLowerCase();
-		if (!q) return products;
-		return products.filter(p => (p.title + ' ' + p.description + ' ' + p.category).toLowerCase().includes(q));
-	}, [products, query]);
+	const filtered = useMemo(() => ArabellaUtils.filterProducts(products, query), [products, query]);
 
 	function addToCart(product) {
-		setCart(prev => {
-			const exists = prev.find(i => i.id === product.id);
-			if (exists) return prev.map(i => i.id === product.id ? {...i, qty: i.qty + 1} : i);
-			return [...prev, {...product, qty: 1}];
-		});
+		setCart(prev => ArabellaUtils.addToCart(prev, product));
 	}
 
 	function removeFromCart(id) {
-		setCart(prev => prev.filter(i => i.id !== id));
+		setCart(prev => ArabellaUtils.removeFromCart(prev, id));
 	}
 
 	function clearCart() {
@@ -136,7 +126,7 @@ function App() {
 
 	return (
 		<div>
-			<Navbar onSearchChange={setQuery} cartCount={cart.reduce((s,i)=>s+i.qty,0)} onToggleCart={() => setCartOpen(true)} />
+			<Navbar onSearchChange={setQuery} cartCount={ArabellaUtils.cartCount(cart)} onToggleCart={() => setCartOpen(true)} />
 
 			<main className="container mx-auto px-4 py-12" id="home">
 				{!query && (
@@ -157,11 +147,7 @@ function App() {
 				)}
 
 				{(() => {
-					const byCategory = {};
-					(filtered || []).forEach(p => {
-						if (!byCategory[p.category]) byCategory[p.category] = [];
-						byCategory[p.category].push(p);
-					});
+					const byCategory = ArabellaUtils.groupByCategory(filtered);
 
 					return Object.keys(byCategory).map(cat => (
 						<section key={cat} className="category-section">

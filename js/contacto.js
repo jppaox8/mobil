@@ -36,21 +36,13 @@ function ContactCard(){
   const onChange = (k)=>(e)=> setForm({...form, [k]: e.target.value});
 
   const validate = ()=>{
-    const e = {};
-    if(!form.nombre.trim()) e.nombre = 'Requerido';
-    if(!form.correo.trim()) e.correo = 'Requerido';
-    else if(!/^\S+@\S+\.\S+$/.test(form.correo)) e.correo = 'Email inválido';
-    if(!form.mensaje.trim()) e.mensaje = 'Escribe tu mensaje';
-    if(!form.telefono || !form.telefono.trim()) e.telefono = 'Requerido';
-    else if(!/^[+0-9()\-\s]{6,}$/.test(form.telefono)) e.telefono = 'Teléfono inválido';
+    const e = ArabellaUtils.validateContactForm(form);
     setErrors(e);
     return Object.keys(e).length === 0;
   };
 
   const fallbackMail = ()=>{
-    const body = `Nombre: ${form.nombre}\nEmail: ${form.correo}\nTeléfono: ${form.telefono}\nPais: ${form.pais}\n\n${form.mensaje}`;
-    const href = `mailto:contacto@tutienda.com?subject=${encodeURIComponent('Consulta desde web')}&body=${encodeURIComponent(body)}`;
-    window.location.href = href;
+    window.location.href = ArabellaUtils.buildMailtoHref(form);
   };
 
   const submit = async (ev)=>{
