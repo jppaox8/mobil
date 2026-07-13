@@ -1,5 +1,5 @@
 const { useState, useEffect } = React;
-const WEBHOOK_URL = 'https://hook.us2.make.com/vnccle9u0ur11dij3xohyf1fu5inwkak';
+const WEBHOOK_URL = (window.ARABELLA_CONFIG && window.ARABELLA_CONFIG.contactWebhookUrl) || '';
 
 function Toast({ text, kind = 'success', onClose }){
   useEffect(()=>{
@@ -50,8 +50,13 @@ function ContactCard(){
     setToast('');
     if(!validate()) return;
     setStatus('sending');
+    if(!WEBHOOK_URL){
+      console.warn('No hay webhook configurado (window.ARABELLA_CONFIG.contactWebhookUrl). Usando correo como alternativa.');
+      setStatus('error');
+      fallbackMail();
+      return;
+    }
     try{
-  console.log('Enviando datos de contacto al webhook:', WEBHOOK_URL, form);
   const payload = { source: 'contacto.html', ...form, timestamp: new Date().toISOString() };
   const res = await fetch(WEBHOOK_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
       if(res.ok){
