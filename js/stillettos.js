@@ -4,6 +4,16 @@ function formatPrice(v) {
     return 'S/ ' + Number(v).toFixed(2);
 }
 
+function readCart() {
+    try {
+        const raw = localStorage.getItem('arabella_cart');
+        return raw ? JSON.parse(raw) : [];
+    } catch (e) {
+        console.warn('Carrito corrupto en localStorage, se reinicia:', e);
+        return [];
+    }
+}
+
 function Navbar({ onSearchChange, cartCount, onToggleCart }) {
     return (
         <header className="site-header shadow-sm sticky top-0 z-40">
@@ -99,21 +109,32 @@ function StilletosApp() {
     const [items, setItems] = useState([]);
     const [query, setQuery] = useState('');
     const [cartOpen, setCartOpen] = useState(false);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
 
     useEffect(() => {
+        setLoading(true);
+        setError(null);
         fetch('data/shoes.json')
-            .then(r => r.json())
+            .then(r => {
+                if (!r.ok) throw new Error('No se pudo cargar el catálogo (HTTP ' + r.status + ')');
+                return r.json();
+            })
             .then(data => {
                 const filtered = (data || []).filter(d => d.category === 'Stilletos');
                 setItems(filtered);
             })
-            .catch(err => { console.error(err); setItems([]); });
+            .catch(err => {
+                console.error('Error al cargar el catálogo:', err);
+                setError(err && err.message ? err.message : 'Error al cargar el catálogo');
+                setItems([]);
+            })
+            .finally(() => setLoading(false));
     }, []);
 
     function addToCart(product) {
         try {
-            const raw = localStorage.getItem('arabella_cart');
-            const cart = raw ? JSON.parse(raw) : [];
+            const cart = readCart();
             const exists = cart.find(i => i.id === product.id);
             if (exists) {
                 const updated = cart.map(i => i.id === product.id ? {...i, qty: i.qty + 1} : i);
@@ -123,16 +144,13 @@ function StilletosApp() {
                 localStorage.setItem('arabella_cart', JSON.stringify(cart));
             }
             alert('Añadido al carrito: ' + product.title);
-        } catch(e) { console.error(e); }
+        } catch(e) {
+            console.error('No se pudo guardar el carrito:', e);
+            alert('No se pudo agregar al carrito. Es posible que el almacenamiento del navegador esté deshabilitado o lleno.');
+        }
     }
 
-    const cartCount = (() => {
-        try {
-            const raw = localStorage.getItem('arabella_cart');
-            const c = raw ? JSON.parse(raw) : [];
-            return c.reduce((s,i) => s + (i.qty || 0), 0);
-        } catch(e) { return 0; }
-    })();
+    const cartCount = readCart().reduce((s,i) => s + (i.qty || 0), 0);
 
     const visible = useMemo(() => {
         const q = (query || '').trim().toLowerCase();
@@ -153,16 +171,25 @@ function StilletosApp() {
                 </section>
 
                 <section className="category-section">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-                        {visible.map(p => (
-                            <ProductCard key={p.id} product={p} onAdd={addToCart} />
-                        ))}
-                        {visible.length === 0 && <div className="text-center text-gray-500">No se encontraron productos en esta categoría.</div>}
-                    </div>
+                    {error ? (
+                        <div className="text-center py-8">
+                            <div className="text-red-700">No se pudieron cargar los productos: {error}</div>
+                            <button onClick={() => window.location.reload()} className="add-btn mt-4">Reintentar</button>
+                        </div>
+                    ) : loading ? (
+                        <div className="text-center text-gray-500 py-8">Cargando productos...</div>
+                    ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                            {visible.map(p => (
+                                <ProductCard key={p.id} product={p} onAdd={addToCart} />
+                            ))}
+                            {visible.length === 0 && <div className="text-center text-gray-500">No se encontraron productos en esta categoría.</div>}
+                        </div>
+                    )}
                 </section>
             </main>
 
-            <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} cart={(() => { try { const r = localStorage.getItem('arabella_cart'); return r?JSON.parse(r):[] } catch(e){return []} })()} onRemove={(id)=>{ const raw = localStorage.getItem('arabella_cart'); const cart = raw?JSON.parse(raw):[]; const updated = cart.filter(i=>i.id!==id); localStorage.setItem('arabella_cart', JSON.stringify(updated)); window.location.reload(); }} onClear={()=>{ localStorage.removeItem('arabella_cart'); window.location.reload(); }} />
+            <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} cart={readCart()} onRemove={(id)=>{ try { const updated = readCart().filter(i=>i.id!==id); localStorage.setItem('arabella_cart', JSON.stringify(updated)); window.location.reload(); } catch(e){ console.error('No se pudo actualizar el carrito:', e); alert('No se pudo actualizar el carrito.'); } }} onClear={()=>{ try { localStorage.removeItem('arabella_cart'); window.location.reload(); } catch(e){ console.error('No se pudo vaciar el carrito:', e); alert('No se pudo vaciar el carrito.'); } }} />
 
             <footer className="site-footer mt-12 bg-gray-800 text-gray-200">
                 <div className="container mx-auto px-4 py-8 grid grid-cols-1 md:grid-cols-3 gap-6">

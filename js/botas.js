@@ -7,25 +7,43 @@ function ProductDetail() {
     const [qty, setQty] = useState(1);
     const [selectedSize, setSelectedSize] = useState(null);
     const [imageIndex, setImageIndex] = useState(0);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
 
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
         const id = params.get('id');
+        setLoading(true);
+        setError(null);
         fetch('data/shoes.json')
-            .then(r => r.json())
+            .then(r => {
+                if (!r.ok) throw new Error('No se pudo cargar el catálogo (HTTP ' + r.status + ')');
+                return r.json();
+            })
             .then(data => {
                 const p = (data || []).find(x => String(x.id) === String(id));
                 setProduct(p || null);
                 setImageIndex(0);
             })
-            .catch(err => { console.error(err); setProduct(null); });
+            .catch(err => {
+                console.error('Error al cargar el producto:', err);
+                setError(err && err.message ? err.message : 'Error al cargar el producto');
+                setProduct(null);
+            })
+            .finally(() => setLoading(false));
     }, []);
 
     function addToCart() {
+        if (!product) return;
         try {
             const raw = localStorage.getItem('arabella_cart');
-            const cart = raw ? JSON.parse(raw) : [];
-            if (!product) return;
+            let cart;
+            try {
+                cart = raw ? JSON.parse(raw) : [];
+            } catch (parseErr) {
+                console.warn('Carrito corrupto en localStorage, se reinicia:', parseErr);
+                cart = [];
+            }
             const exists = cart.find(i => i.id === product.id && i.size === selectedSize);
             if (exists) {
                 const updated = cart.map(i => (i.id === product.id && i.size === selectedSize) ? {...i, qty: i.qty + qty} : i);
@@ -35,7 +53,29 @@ function ProductDetail() {
                 localStorage.setItem('arabella_cart', JSON.stringify(cart)); 
             }
             alert('Añadido al carrito: ' + product.title + (selectedSize ? (' (Talla ' + selectedSize + ')') : ''));
-        } catch(e) { console.error(e); }
+        } catch(e) {
+            console.error('No se pudo guardar el carrito:', e);
+            alert('No se pudo agregar al carrito. Es posible que el almacenamiento del navegador esté deshabilitado o lleno.');
+        }
+    }
+
+    if (loading) {
+        return (
+            <div className="container mx-auto px-4 py-12">
+                <div className="text-center text-gray-500">Cargando producto...</div>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="container mx-auto px-4 py-12">
+                <div className="text-center text-red-700">No se pudo cargar el producto: {error}</div>
+                <div className="text-center mt-4">
+                    <button onClick={() => window.location.reload()} className="add-btn">Reintentar</button>
+                </div>
+            </div>
+        );
     }
 
     if (!product) {
