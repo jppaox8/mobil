@@ -1,8 +1,7 @@
 const { useState, useEffect, useMemo } = React;
 
-function formatPrice(v) {
-    return 'S/ ' + Number(v).toFixed(2);
-}
+// Shared business logic lives in js/utils.js (loaded before this script) and is
+// exposed on window as `ArabellaUtils`, which also provides a global formatPrice.
 
 function readCart() {
     try {
@@ -69,7 +68,7 @@ function ProductCard({ product, onAdd }) {
 }
 
 function CartDrawer({ open, onClose, cart, onRemove, onClear }) {
-    const total = cart.reduce((s, it) => s + it.price * it.qty, 0);
+    const total = ArabellaUtils.cartTotal(cart);
     return (
         <div className={`${open ? 'block' : 'hidden'} fixed inset-0 z-50`}> 
             <div className="absolute inset-0 bg-black/40" onClick={onClose}></div>
@@ -121,8 +120,7 @@ function StilletosApp() {
                 return r.json();
             })
             .then(data => {
-                const filtered = (data || []).filter(d => d.category === 'Stilletos');
-                setItems(filtered);
+                setItems(ArabellaUtils.filterByCategory(data, 'Stilletos'));
             })
             .catch(err => {
                 console.error('Error al cargar el catálogo:', err);
@@ -135,14 +133,8 @@ function StilletosApp() {
     function addToCart(product) {
         try {
             const cart = readCart();
-            const exists = cart.find(i => i.id === product.id);
-            if (exists) {
-                const updated = cart.map(i => i.id === product.id ? {...i, qty: i.qty + 1} : i);
-                localStorage.setItem('arabella_cart', JSON.stringify(updated));
-            } else {
-                cart.push({...product, qty: 1});
-                localStorage.setItem('arabella_cart', JSON.stringify(cart));
-            }
+            const updated = ArabellaUtils.addToCart(cart, product);
+            localStorage.setItem('arabella_cart', JSON.stringify(updated));
             alert('Añadido al carrito: ' + product.title);
         } catch(e) {
             console.error('No se pudo guardar el carrito:', e);
@@ -150,16 +142,9 @@ function StilletosApp() {
         }
     }
 
-    const cartCount = readCart().reduce((s,i) => s + (i.qty || 0), 0);
+    const cartCount = ArabellaUtils.cartCount(readCart());
 
-    const visible = useMemo(() => {
-        const q = (query || '').trim().toLowerCase();
-        if (!q) return items;
-        return (items || []).filter(p => {
-            const hay = ((p.title || '') + ' ' + (p.description || '') + ' ' + (p.category || '')).toLowerCase();
-            return hay.indexOf(q) !== -1;
-        });
-    }, [items, query]);
+    const visible = useMemo(() => ArabellaUtils.filterProducts(items, query), [items, query]);
 
     return (
         <div>

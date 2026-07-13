@@ -1,6 +1,7 @@
 const { useState, useEffect } = React;
 
-function formatPrice(v) { return 'S/ ' + Number(v).toFixed(2); }
+// Shared business logic lives in js/utils.js (loaded before this script) and is
+// exposed on window as `ArabellaUtils`, which also provides a global formatPrice.
 
 function ProductDetail() {
     const [product, setProduct] = useState(null);
@@ -44,14 +45,8 @@ function ProductDetail() {
                 console.warn('Carrito corrupto en localStorage, se reinicia:', parseErr);
                 cart = [];
             }
-            const exists = cart.find(i => i.id === product.id && i.size === selectedSize);
-            if (exists) {
-                const updated = cart.map(i => (i.id === product.id && i.size === selectedSize) ? {...i, qty: i.qty + qty} : i);
-                localStorage.setItem('arabella_cart', JSON.stringify(updated));
-            } else {
-                cart.push({...product, qty, size: selectedSize});
-                localStorage.setItem('arabella_cart', JSON.stringify(cart)); 
-            }
+            const updated = ArabellaUtils.addToCart(cart, product, { qty, matchSize: true, size: selectedSize });
+            localStorage.setItem('arabella_cart', JSON.stringify(updated));
             alert('Añadido al carrito: ' + product.title + (selectedSize ? (' (Talla ' + selectedSize + ')') : ''));
         } catch(e) {
             console.error('No se pudo guardar el carrito:', e);
@@ -88,10 +83,10 @@ function ProductDetail() {
 
     const sizes = [35,36,37,38,39];
 
-    const imgs = (product.images && product.images.length) ? product.images : [product.image];
+    const imgs = ArabellaUtils.productImages(product);
 
-    function prevImage(e){ e && e.stopPropagation(); setImageIndex(i => (i - 1 + imgs.length) % imgs.length); }
-    function nextImage(e){ e && e.stopPropagation(); setImageIndex(i => (i + 1) % imgs.length); }
+    function prevImage(e){ e && e.stopPropagation(); setImageIndex(i => ArabellaUtils.cycleIndex(i, -1, imgs.length)); }
+    function nextImage(e){ e && e.stopPropagation(); setImageIndex(i => ArabellaUtils.cycleIndex(i, 1, imgs.length)); }
 
     return (
         <div>
@@ -153,7 +148,7 @@ function ProductDetail() {
                             ) : (
                                 <div className="mt-2">
                                     <div className="text-sm font-semibold">COLOR</div>
-                                    <div className="mb-2">{product.title.match(/NEGRO|BEIGE|ROJO|BURDEOS|MARRÓN|NUDE/i)? (product.title.match(/NEGRO|BEIGE|ROJO|BURDEOS|MARRÓN|NUDE/i)[0]) : 'Variante'}</div>
+                                    <div className="mb-2">{ArabellaUtils.colorFromTitle(product.title)}</div>
                                     <div className="text-sm font-semibold">Descripción</div>
                                     <p className="mt-1">{product.description}</p>
                                 </div>
